@@ -68,6 +68,12 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
+    # Sales Coach settings
+    OPENAI_API_KEY: str = ""
+    HUME_API_KEY: str = ""
+    HUME_SECRET_KEY: str = ""
+    HUME_CONFIG_ID: str = ""  # EVI config ID from Hume dashboard
+
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587

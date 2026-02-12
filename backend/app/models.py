@@ -1,6 +1,9 @@
 import uuid
+from datetime import datetime
 
 from pydantic import EmailStr
+from sqlalchemy import Column
+from sqlalchemy import types as sa_types
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -44,6 +47,9 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
+    call_sessions: list["CallSession"] = Relationship(
+        back_populates="owner", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required
@@ -90,6 +96,80 @@ class ItemPublic(ItemBase):
 class ItemsPublic(SQLModel):
     data: list[ItemPublic]
     count: int
+
+
+# ---- Call Session Models ----
+
+
+class CallSession(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    persona: str = Field(max_length=100)
+    scenario: str | None = Field(default=None, max_length=500)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    ended_at: datetime | None = Field(default=None)
+    duration_seconds: float | None = Field(default=None)
+    status: str = Field(default="active", max_length=20)
+    hume_chat_id: str | None = Field(default=None, max_length=255)
+    transcript: dict | None = Field(
+        default=None, sa_column=Column(sa_types.JSON)
+    )
+    emotion_data: dict | None = Field(
+        default=None, sa_column=Column(sa_types.JSON)
+    )
+    analysis_results: dict | None = Field(
+        default=None, sa_column=Column(sa_types.JSON)
+    )
+    owner: User | None = Relationship(back_populates="call_sessions")
+
+
+# Pydantic schemas for CallSession API
+class CallSessionCreate(SQLModel):
+    persona: str = Field(max_length=100)
+    scenario: str | None = Field(default=None, max_length=500)
+
+
+class CallSessionPublic(SQLModel):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    persona: str
+    scenario: str | None
+    created_at: datetime
+    ended_at: datetime | None
+    duration_seconds: float | None
+    status: str
+
+
+class CallSessionsPublic(SQLModel):
+    data: list[CallSessionPublic]
+    count: int
+
+
+class CallSessionComplete(SQLModel):
+    duration_seconds: float
+    transcript: dict
+    emotion_data: dict
+    hume_chat_id: str | None = None
+
+
+class CoachingReportPublic(SQLModel):
+    overall_score: int
+    tone_summary: str
+    speech_metrics: dict
+    emotion_summary: dict
+    key_moments: list[dict]
+    recommendations: list[str]
+    strengths: list[str]
+    areas_for_improvement: list[str]
+    transcript: dict | None = None
+
+
+class HumeTokenResponse(SQLModel):
+    access_token: str
+    expires_in: int
+    config_id: str
 
 
 # Generic message
